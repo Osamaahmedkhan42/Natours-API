@@ -6,8 +6,30 @@ const Tour = require('../models/tourModel')
 
 
 exports.getAllTours = async (req, res) => {
+
     try {
-        const tours = await Tour.find()
+        //set up filtering
+        const queryObj = { ...req.query }
+        const excludedFields = ['page', 'sort', 'limit', 'fields']
+        excludedFields.forEach(el => delete queryObj[el])
+
+        //Advance filtering
+        let queryString = JSON.stringify(queryObj)
+        queryString = queryString.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`)
+
+        //Constructing query
+        let query = Tour.find(JSON.parse(queryString))
+
+
+        //Sorting
+        if (req.query.sort) {
+            query = query.sort(req.query.sort)
+        }
+
+        const tours = await query
+
+
+        //const tours = await Tour.find(queryObj)
         res.status(200).json({
             status: 'Sucess',
             results: tours.length,
@@ -27,7 +49,10 @@ exports.getAllTours = async (req, res) => {
 
 exports.getTour = async (req, res) => {
     try {
-        console.log(req.params.id)
+
+
+        //console.log(queryObj)
+        //console.log(req.params)
         const tours = await Tour.findById(req.params.id)
         //const tours = await Tour.findOne({ name: req.params.id })
         res.status(200).json({
@@ -59,9 +84,10 @@ exports.createTour = async (req, res) => {
             }
         })
     } catch (error) {
+        console.log(error)
         res.status(400).json({
             status: "failed!",
-            message: "Error invalid data"
+            message: error
         })
 
 
