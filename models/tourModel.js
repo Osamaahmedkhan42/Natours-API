@@ -1,10 +1,17 @@
 const mongoose = require('mongoose')
+const slugify = require('slugify')
+//const validatorz = require('validator');
+
+
 const tourSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, "A tour must have a name"],
-        unique: true
+        unique: true,
+        maxlength: [40, "tour name must have lenth then 40"],
+        //validate: [validatorz., 'This must be alphaNumerical']
     },
+    slug: String,
     duration: {
         type: Number,
         required: [true, 'A tour must have duration']
@@ -30,7 +37,16 @@ const tourSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'A tour must have price']
     },
-    priceDiscount: Number,
+    priceDiscount: {
+        type: Number,
+        validate: {
+            validator: function (val) {
+                return val < this.price
+            },
+            message: 'discont price ({VALUE}) must be less then regular price'
+        }
+    },
+
     Summary: {
         type: String,
         trim: true
@@ -50,11 +66,39 @@ const tourSchema = new mongoose.Schema({
         deafult: new Date()
     },
     startDates: [Date],
+    secretTour: { type: Boolean, default: false },
+},
+    {
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true }
+    }
+)
+//document middleware
+tourSchema.pre('save', function (next) {
+    this.slug = slugify(this.name, { lower: true })
+    next()
+})
+tourSchema.post('save', function (doc, next) {
+    //i do nothing at this moment
+    next()
+})
+// Query Middleware
+tourSchema.pre('/^find/', function (next) {
+    this.find({
+        secretTour: { $ne: true }
+    })
+    next()
+})
+//Agregation Middlwware
+tourSchema.pre('aggregate', function (next) {
+    this.pipeline().unshift({
+        $match: { secretTour: { $ne: true } }
+    })
+})
 
-
-
-
-
+//virtual properties
+tourSchema.virtual('duarationWeeks').get(function () {
+    return this.duration / 7
 })
 
 const Tour = mongoose.model('Tour', tourSchema)
