@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken')
 const User = require('../models/userModel')
 const catchAsync = require('../utils/catchAsync')
 const appError = require('../utils/appError')
+const sendEmail = require('../utils/email')
 
 //sign token
 const signToken = id => {
@@ -17,10 +18,11 @@ exports.singup = catchAsync(async (req, res, next) => {
     // const newUser = await User.create(req.body)
 
     //FIX
-    console.log(req.body.passwordChangedAt)
+    // console.log(req.body.passwordChangedAt)
     const newUser = await User.create({
         name: req.body.name,
         email: req.body.email,
+        role: req.body.role,
         password: req.body.password,
         passwordConfirm: req.body.passwordConfirm,
         passwordChangedAt: req.body.passwordChangedAt,
@@ -86,4 +88,54 @@ exports.protect = catchAsync(async (req, res, next) => {
     }
     req.user = freshUser
     next()
-}) 
+})
+
+//authorization
+exports.restrictTo = (...roles) => {
+    return (req, res, next) => {
+        //roles is an array
+        if (!roles.includes(req.user.role)) {
+            return next(new appError('You dont have permission to perform this action', 403))
+        }
+        next()
+    }
+}
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+    //get user based on email
+    const user = await User.findOne({
+        email: req.body.email,
+    })
+    if (!user) {
+        return next(new appError('Email address in not valid', 404))
+    }
+    //gen random token
+    const resetToken = user.createPasswordResetToken()
+    await user.save({ validateBeforeSave: false })
+    //send it back as an email
+    const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`
+    const message = `Forgot your pass make a patch request to ${resetURL} with pass and passConfirm.\n If you did not forgot your pass plz ignore this email`
+    try {
+        await sendEmail({
+
+            email: user.email,
+            subject: 'this token expires in 10 min',
+            message
+        })
+        res.status(200).json({
+            status: 'Sucess',
+            message: 'Token sent to email'
+        })
+    } catch (error) {
+        //console.log(error)
+        user.passwordResetToken = undefined
+        user.passwordResetExpires = undefined
+        //saving changes to db
+        await user.save({ validateBeforeSave: false })
+        return next(new appError('There was error sending email.Try again later', 500))
+
+    }
+
+})
+exports.resetPassword = (req, res, next) => {
+
+}

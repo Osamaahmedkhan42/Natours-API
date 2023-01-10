@@ -9,9 +9,11 @@ const router = express.Router();
 router.route('/top-5-cheap').get(tourController.aliasTopTours, tourController.getAllTours)
 router.route('/tour-stats').get(tourController.getTourStats)
 
+
+
 router
     .route('/')
-    .get(authController.protect, tourController.getAllTours)
+    .get(authController.protect, authController.restrictTo('admin'), tourController.getAllTours)
     .post(tourController.createTour);
 
 router
