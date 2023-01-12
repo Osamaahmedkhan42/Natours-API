@@ -54,6 +54,14 @@ userSchema.pre('save', async function (next) {
     this.passwordConfirm = undefined
 
 })
+//middle ware to create passwordUpdateAt property
+userSchema.pre('save', function (next) {
+    if (!this.isModified('password') || this.isNew) return next()
+    this.passwordChangedAt = Date.now() - 1000
+    next()
+
+})
+
 
 //checking / comparing pass
 userSchema.methods.correctPassword = async function (candidatePass, userPass) {
@@ -63,7 +71,7 @@ userSchema.methods.correctPassword = async function (candidatePass, userPass) {
 // checking for changed passwords
 userSchema.methods.changedPasswordAfter = function (JWTtimeStamp) {
 
-    console.log(this.passwordChangedAt)
+
     if (this.passwordChangedAt) {
         const changedTimeStamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10)
         //console.log(changedTimeStamp, JWTtimeStamp)

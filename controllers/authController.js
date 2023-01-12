@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const { promisify } = require('util')
 const jwt = require('jsonwebtoken')
 const User = require('../models/userModel')
@@ -9,6 +10,17 @@ const sendEmail = require('../utils/email')
 const signToken = id => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
+    })
+}
+
+const createSendToken = (user, statusCode, res) => {
+    const token = signToken(user._id)
+    res.status(statusCode).json({
+        status: 'sucess',
+        token,
+        data: {
+            user
+        }
     })
 }
 
@@ -30,15 +42,16 @@ exports.singup = catchAsync(async (req, res, next) => {
 
     })
     //signing jwt token
-    const token = signToken(newUser._id)
+    createSendToken(newUser, 201, res)
+    // const token = signToken(newUser._id)
 
-    res.status(201).json({
-        status: 'sucess',
-        token,
-        data: {
-            user: newUser
-        }
-    })
+    // res.status(201).json({
+    //     status: 'sucess',
+    //     token,
+    //     data: {
+    //         user: newUser
+    //     }
+    // })
 })
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -56,15 +69,12 @@ exports.login = catchAsync(async (req, res, next) => {
         return next(new appError('Incorrect Email or Password', 401))
     }
     // 3) if ok send token to clinet
-    const token = signToken(user._id)
-    res.status(200).json({
-        status: 'success',
-        token
-    })
+    createSendToken(user, 200, res)
 })
 
 //Middle ware for auth roues
 exports.protect = catchAsync(async (req, res, next) => {
+
     // 1.If the token is there
     let token
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -73,6 +83,7 @@ exports.protect = catchAsync(async (req, res, next) => {
     if (!token) {
         next(new appError('You are not logged In!', 401))
     }
+
     // 2.verify
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
     //console.log(decoded)
@@ -81,12 +92,15 @@ exports.protect = catchAsync(async (req, res, next) => {
     if (!freshUser) {
         return next(new appError('The user belonging to this token does not exsists', 401))
     }
+
     // 4.if user chnage password after JWt was issued
 
     if (freshUser.changedPasswordAfter(decoded.iat)) {
         return next(new appError('User changed password recently!.plz login again', 401))
     }
+
     req.user = freshUser
+
     next()
 })
 
@@ -136,6 +150,43 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     }
 
 })
-exports.resetPassword = (req, res, next) => {
+exports.resetPassword = catchAsync(async (req, res, next) => {
+    // 1. Get user based on token
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex')
 
-}
+    const user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() }
+    })
+    if (!user) {
+        return next(new appError('Token in invalid or expired', 400))
+    }
+    // 2. If token is not expired and there is a user set new pass
+    user.password = req.body.password,
+        user.passwordConfirm = req.body.passwordConfirm
+    user.passwordResetToken = undefined
+    user.passwordResetExpires = undefined
+    await user.save()
+
+    // 3. Update changePasswordAt for that user.
+    // 4. Log the user in using JWT
+    const token = signToken(user._id)
+    createSendToken(user, 200, res)
+
+})
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+    //Get user form DB
+
+    const currentUser = await User.findById(req.user.id).select('+password')
+    //Check Password is correct
+    if (!await currentUser.correctPassword(req.body.passwordCurrent, currentUser.password)) {
+        return next(new appError('Current Password is wrong', 401))
+    }
+    //If correct update
+    currentUser.password = req.body.password
+    currentUser.passwordConfirm = req.body.passwordConfirm
+    await currentUser.save()
+    //Log in
+    createSendToken(currentUser, 200, res)
+})

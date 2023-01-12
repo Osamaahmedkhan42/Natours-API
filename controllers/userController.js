@@ -1,4 +1,5 @@
-const User = require('../models/userModel')
+const User = require('../models/userModel');
+const appError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync')
 
 
@@ -41,3 +42,33 @@ exports.deleteUser = (req, res) => {
         message: 'This route is not yet defined!'
     });
 };
+
+exports.updateMe = catchAsync(async (req, res, next) => {
+
+    // create err if user post password update data to this route
+    if (req.body.password || req.body.passwordConfirm) {
+        return next(new appError('This route is not for password update plz use /updateMyPassword', 400))
+    }
+    // update user doc
+    const filterObj = (obj, ...allowedFileds) => {
+        const newObject = {}
+        Object.keys(obj).forEach(x => {
+            if (allowedFileds.includes(x)) {
+                newObject[x] = obj[x]
+            }
+        })
+        return newObject
+    }
+    //filtration
+    const filteredBody = filterObj(req.body, 'name', 'email')
+
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
+        new: true,
+        runValidators: true
+    })
+
+    res.status(200).json({
+        status: 'sucess',
+        data: updatedUser
+    })
+})
