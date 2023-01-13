@@ -16,11 +16,13 @@ router.patch('/resetPassword/:token', authController.resetPassword)
 router.patch('/updateMyPassword', authController.protect, authController.updatePassword)
 //update data
 router.patch('/updateMe', authController.protect, userController.updateMe)
+//delete me
+router.delete('/deleteMe', authController.protect, userController.deleteMe)
 
 
 router
     .route('/')
-    .get(authController.restrictTo('admin'), userController.getAllUsers)
+    .get(authController.protect, authController.restrictTo('admin'), userController.getAllUsers)
     .post(userController.createUser);
 
 router

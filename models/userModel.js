@@ -43,10 +43,22 @@ const userSchema = new mongoose.Schema({
     passwordChangedAt: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    active: {
+        type: Boolean,
+        default: true,
+        select: false
+    }
 
 
 })
-
+//middlwware not to return deleted users
+userSchema.pre(/^find/, function (next) {
+    //this points to current query
+    this.find({
+        active: { $ne: false }
+    })
+    next()
+})
 //middle ware b/w save
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next()

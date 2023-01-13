@@ -6,6 +6,9 @@ const catchAsync = require('../utils/catchAsync')
 const appError = require('../utils/appError')
 const sendEmail = require('../utils/email')
 
+
+
+
 //sign token
 const signToken = id => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -15,6 +18,15 @@ const signToken = id => {
 
 const createSendToken = (user, statusCode, res) => {
     const token = signToken(user._id)
+    //sending cookies
+    const cookieOptions = {
+        expires: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        secure: false,
+        httpOnly: true
+    }
+    //remove the password from response
+    user.password = undefined
+    res.cookie('jwt', token, cookieOptions)
     res.status(statusCode).json({
         status: 'sucess',
         token,
@@ -108,6 +120,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 exports.restrictTo = (...roles) => {
     return (req, res, next) => {
         //roles is an array
+
         if (!roles.includes(req.user.role)) {
             return next(new appError('You dont have permission to perform this action', 403))
         }
