@@ -2,6 +2,10 @@ const express = require('express')
 const appError = require('../Natours-API/utils/appError')
 const globalErrorHandler = require('../Natours-API/controllers/errorController')
 const rateLimit = require('express-rate-limit')
+const helmet = require('helmet')
+const mongoSanitize = require('express-mongo-sanitize')
+const xss = require('xss-clean')
+const hpp = require('hpp')
 
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
@@ -11,7 +15,7 @@ const app = express()
 
 //limiter
 const limiter = rateLimit({
-    max: 3,
+    max: 100,
     window: 60 * 60 * 1000,
     message: "Too many requests try agin later after 1 hour"
 })
@@ -19,8 +23,18 @@ const limiter = rateLimit({
 
 
 // MIDDLEWARES
+app.use(helmet())
 app.use('/api', limiter)
-app.use(express.json())
+app.use(express.json({
+    limit: '10kb'
+}))
+//data sanitize for NoSQL injection and XSS
+app.use(mongoSanitize())
+app.use(xss())
+//parimeter pollution
+app.use(hpp({
+    whitelist: ['duration', 'ratingsQuantity', 'ratingAverage', 'maxGroupSize', 'difficulty', 'price']
+}))
 
 
 //ROUTES
