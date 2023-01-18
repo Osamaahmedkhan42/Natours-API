@@ -1,20 +1,23 @@
 const mongoose = require('mongoose')
 const slugify = require('slugify')
+const User = require('./userModel')
 //const validatorz = require('validator');
 
 
 const tourSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: [true, "A tour must have a name"],
+        required: [true, 'A tour must have a name'],
         unique: true,
-        maxlength: [40, "tour name must have lenth then 40"],
-        //validate: [validatorz., 'This must be alphaNumerical']
+        trim: true,
+        maxlength: [40, 'A tour name must have less or equal then 40 characters'],
+        minlength: [10, 'A tour name must have more or equal then 10 characters']
+        // validate: [validator.isAlpha, 'Tour name must only contain characters']
     },
     slug: String,
     duration: {
         type: Number,
-        required: [true, 'A tour must have duration']
+        required: [true, 'A tour must have a duration']
     },
     maxGroupSize: {
         type: Number,
@@ -22,57 +25,128 @@ const tourSchema = new mongoose.Schema({
     },
     difficulty: {
         type: String,
-        required: [true, 'A tour must have dificulty']
+        required: [true, 'A tour must have a difficulty'],
+        enum: {
+            values: ['easy', 'medium', 'difficult'],
+            message: 'Difficulty is either: easy, medium, difficult'
+        }
     },
     ratingsAverage: {
         type: Number,
-        default: 4.5
+        default: 4.5,
+        min: [1, 'Rating must be above 1.0'],
+        max: [5, 'Rating must be below 5.0'],
+        set: val => Math.round(val * 10) / 10 // 4.666666, 46.6666, 47, 4.7
     },
     ratingsQuantity: {
         type: Number,
         default: 0
-
     },
     price: {
         type: Number,
-        required: [true, 'A tour must have price']
+        required: [true, 'A tour must have a price']
     },
     priceDiscount: {
         type: Number,
         validate: {
             validator: function (val) {
-                return val < this.price
+                // this only points to current doc on NEW document creation
+                return val < this.price;
             },
-            message: 'discont price ({VALUE}) must be less then regular price'
+            message: 'Discount price ({VALUE}) should be below regular price'
         }
     },
-
-    Summary: {
+    summary: {
         type: String,
-        trim: true
+        trim: true,
+        required: [true, 'A tour must have a summary']
     },
-    discription: {
+    description: {
         type: String,
-        //required: [true, 'A tour must have discription'],
-        trim: true
+        trim: true,
+        required: false
     },
     imageCover: {
         type: String,
-        required: [true, 'A tour must have a image'],
+        required: [true, 'A tour must have a cover image']
     },
     images: [String],
     createdAt: {
         type: Date,
-        deafult: new Date()
+        default: Date.now(),
+        select: false
     },
     startDates: [Date],
-    secretTour: { type: Boolean, default: false },
+    secretTour: {
+        type: Boolean,
+        default: false
+    },
+    startLocation: {
+        // GeoJSON
+        type: {
+            type: String,
+            default: 'Point',
+            enum: ['Point']
+        },
+        coordinates: [Number],
+        address: String,
+        description: String
+    },
+    locations: [
+        {
+            type: {
+                type: String,
+                default: 'Point',
+                enum: ['Point']
+            },
+            coordinates: [Number],
+            address: String,
+            description: String,
+            day: Number
+        }
+    ],
+    guides: [
+        {
+            type: mongoose.Schema.ObjectId,
+            ref: 'User'
+        }
+    ],
+    // reviews: [
+    //     {
+    //         type: mongoose.Schema.ObjectId,
+
+
+    //     }
+    // ],
 },
+
     {
         toJSON: { virtuals: true },
         toObject: { virtuals: true }
     }
 )
+// User as guide //plz put right id 
+
+//Embeding
+// tourSchema.pre('save', async function (next) {
+//     console.log(this.guides)
+//     const guidesPromises = this.guides.map(async id => { return await User.findById(id) })
+//     this.guides = await Promise.all(guidesPromises)
+//     next()
+// })
+
+//Refrencing
+tourSchema.pre(/^find/, function (next) {
+
+    this.populate({
+        path: 'guides',
+        select: '-__v -role'
+
+    })
+    next()
+})
+
+
 //document middleware
 tourSchema.pre('save', function (next) {
     this.slug = slugify(this.name, { lower: true })
@@ -83,7 +157,7 @@ tourSchema.post('save', function (doc, next) {
     next()
 })
 // Query Middleware
-tourSchema.pre('/^find/', function (next) {
+tourSchema.pre(/^find/, function (next) {
     this.find({
         secretTour: { $ne: true }
     })
@@ -99,6 +173,12 @@ tourSchema.pre('aggregate', function (next) {
 //virtual properties
 tourSchema.virtual('duarationWeeks').get(function () {
     return this.duration / 7
+})
+//virtual populate
+tourSchema.virtual('reviews', {
+    ref: 'Review',
+    foreignField: 'tour',
+    localField: '_id'
 })
 
 const Tour = mongoose.model('Tour', tourSchema)

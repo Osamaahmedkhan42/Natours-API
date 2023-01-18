@@ -1,6 +1,7 @@
 const User = require('../models/userModel');
 const appError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync')
+const factory = require('../controllers/handlerFactory')
 
 
 
@@ -30,18 +31,9 @@ exports.createUser = (req, res) => {
         message: 'This route is not yet defined!'
     });
 };
-exports.updateUser = (req, res) => {
-    res.status(500).json({
-        status: 'error',
-        message: 'This route is not yet defined!'
-    });
-};
-exports.deleteUser = (req, res) => {
-    res.status(500).json({
-        status: 'error',
-        message: 'This route is not yet defined!'
-    });
-};
+//Dont change password with this because the pre middle ware wont run
+exports.updateUser = factory.updateOne(User)
+exports.deleteUser = factory.deleteOne(User)
 
 exports.updateMe = catchAsync(async (req, res, next) => {
 
