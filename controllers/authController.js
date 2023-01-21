@@ -92,6 +92,9 @@ exports.protect = catchAsync(async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1]
     }
+    else if (req.cookies.jwt) {
+        token = req.cookies.jwt
+    }
     if (!token) {
         next(new appError('You are not logged In!', 401))
     }
@@ -202,4 +205,32 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
     await currentUser.save()
     //Log in
     createSendToken(currentUser, 200, res)
+})
+
+//Midddle ware for checking if user is LoggedIN with no error handling code
+
+exports.isUserLoggedIn = catchAsync(async (req, res, next) => {
+
+    // 1.If the token is there
+    let token
+    if (req.cookies.jwt) {
+        token = req.cookies.jwt
+        // 2.verify
+        const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
+        // 3.user exsists
+        const freshUser = await User.findById(decoded.id)
+        if (!freshUser) {
+            return next()
+        }
+
+        // 4.if user chnage password after JWt was issued
+
+        if (freshUser.changedPasswordAfter(decoded.iat)) {
+            return next()
+        }
+        res.locals.user = freshUser
+
+        return next()
+    }
+    next()
 })

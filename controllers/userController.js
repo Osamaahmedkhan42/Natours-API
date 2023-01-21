@@ -5,36 +5,18 @@ const factory = require('../controllers/handlerFactory')
 
 
 
-exports.getAllUsers = catchAsync(async (req, res, next) => {
-    const users = await User.find()
 
-
-
-    //const tours = await Tour.find(queryObj)
-    res.status(200).json({
-        status: 'Sucess',
-        results: users.length,
-        data: {
-            users
-        }
-    })
-});
-exports.getUser = (req, res) => {
-    res.status(500).json({
-        status: 'error',
-        message: 'This route is not yet defined!'
-    });
-};
 exports.createUser = (req, res) => {
     res.status(500).json({
         status: 'error',
-        message: 'This route is not yet defined!'
+        message: 'Plz use /singup instead'
     });
 };
-//Dont change password with this because the pre middle ware wont run
-exports.updateUser = factory.updateOne(User)
-exports.deleteUser = factory.deleteOne(User)
 
+exports.getMe = (req, res, next) => {
+    req.params.id = req.user.id
+    next()
+}
 exports.updateMe = catchAsync(async (req, res, next) => {
 
     // create err if user post password update data to this route
@@ -73,3 +55,8 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
         data: null
     })
 })
+//Dont change password with this because the pre middle ware wont run
+exports.updateUser = factory.updateOne(User)
+exports.deleteUser = factory.deleteOne(User)
+exports.getAllUsers = factory.getAll(User)
+exports.getUser = factory.getOne(User)

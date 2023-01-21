@@ -146,6 +146,18 @@ tourSchema.pre(/^find/, function (next) {
     next()
 })
 
+//creating index on price
+// tourSchema.index({ price: 1 })
+//compund index
+tourSchema.index({ price: 1, ratingsAverage: -1 })
+tourSchema.index({ slug: 1 })
+//stopping duplicate with indexes
+tourSchema.index({
+    tour: 1,
+    user: 1,
+}, {
+    unique: true
+})
 
 //document middleware
 tourSchema.pre('save', function (next) {

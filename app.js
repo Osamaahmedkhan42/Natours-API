@@ -1,4 +1,5 @@
 const express = require('express')
+const cookieParser = require('cookie-parser')
 const appError = require('../Natours-API/utils/appError')
 const globalErrorHandler = require('../Natours-API/controllers/errorController')
 const rateLimit = require('express-rate-limit')
@@ -9,10 +10,17 @@ const hpp = require('hpp')
 
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
-const reviewRouter = require('./routes/reviewRoutes')
+const reviewRouter = require('./routes/reviewRoutes');
+const viewRouter = require('./routes/viewRoutes')
 
 
 const app = express()
+//setting templete engine
+app.set('view engine', 'pug')
+app.set('views', './views')
+
+//serving static sites
+app.use(express.static('./public'))
 
 //limiter
 const limiter = rateLimit({
@@ -23,12 +31,14 @@ const limiter = rateLimit({
 
 
 
+
 // MIDDLEWARES
 app.use(helmet())
 app.use('/api', limiter)
 app.use(express.json({
     limit: '10kb'
 }))
+app.use(cookieParser())
 //data sanitize for NoSQL injection and XSS
 app.use(mongoSanitize())
 app.use(xss())
@@ -38,7 +48,9 @@ app.use(hpp({
 }))
 
 
+
 //ROUTES
+app.use('/', viewRouter)
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter)

@@ -9,20 +9,24 @@ const router = express.Router();
 
 router.post('/signup', authController.singup)
 router.post('/login', authController.login)
-//reset
 router.post('/forgotPassword', authController.forgotPassword)
 router.patch('/resetPassword/:token', authController.resetPassword)
+
+//all routes below this will use protect middleware
+router.use(authController.protect)
+//My info
+router.get('/me', userController.getMe, userController.getUser)
 //update current user pass
-router.patch('/updateMyPassword', authController.protect, authController.updatePassword)
+router.patch('/updateMyPassword', authController.updatePassword)
 //update data
-router.patch('/updateMe', authController.protect, userController.updateMe)
+router.patch('/updateMe', userController.updateMe)
 //delete me
-router.delete('/deleteMe', authController.protect, userController.deleteMe)
+router.delete('/deleteMe', userController.deleteMe)
 
-
+router.use(authController.restrictTo('admin'))
 router
     .route('/')
-    .get(authController.protect, authController.restrictTo('admin'), userController.getAllUsers)
+    .get(userController.getAllUsers)
     .post(userController.createUser);
 
 router
