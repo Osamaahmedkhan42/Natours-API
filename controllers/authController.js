@@ -65,6 +65,17 @@ exports.singup = catchAsync(async (req, res, next) => {
     //     }
     // })
 })
+//logout
+
+exports.logout = (req, res) => {
+    res.cookie('jwt', 'loggedOut', {
+        expires: new Date(Date.now() + 10 * 1000),
+        httpOnly: true
+    })
+    res.status(200).json({
+        status: 'sucess'
+    })
+}
 
 exports.login = catchAsync(async (req, res, next) => {
     const { email, password } = req.body
@@ -209,28 +220,33 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 
 //Midddle ware for checking if user is LoggedIN with no error handling code
 
-exports.isUserLoggedIn = catchAsync(async (req, res, next) => {
+exports.isUserLoggedIn = async (req, res, next) => {
 
     // 1.If the token is there
     let token
     if (req.cookies.jwt) {
-        token = req.cookies.jwt
-        // 2.verify
-        const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
-        // 3.user exsists
-        const freshUser = await User.findById(decoded.id)
-        if (!freshUser) {
+        try {
+            token = req.cookies.jwt
+            // 2.verify
+            const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
+            // 3.user exsists
+            const freshUser = await User.findById(decoded.id)
+            if (!freshUser) {
+                return next()
+            }
+
+            // 4.if user chnage password after JWt was issued
+
+            if (freshUser.changedPasswordAfter(decoded.iat)) {
+                return next()
+            }
+            res.locals.user = freshUser
+
             return next()
         }
-
-        // 4.if user chnage password after JWt was issued
-
-        if (freshUser.changedPasswordAfter(decoded.iat)) {
+        catch (err) {
             return next()
         }
-        res.locals.user = freshUser
-
-        return next()
     }
     next()
-})
+}

@@ -12442,27 +12442,14 @@ function () {
       while (1) switch (_context.prev = _context.next) {
         case 0:
           _context.prev = 0;
-          console.log('hereh in login');
-          console.log(email, password);
-          _context.next = 5;
+          _context.next = 3;
           return _axios.default.post('http://localhost:8000/api/v1/users/login', {
             'email': email,
             'password': password
           });
 
-        case 5:
+        case 3:
           res = _context.sent;
-          // const res = await axios({
-          //   method: 'POST',
-          //   url: 'http://localhost/api/v1/users/login',
-          //   data: {
-          //     email,
-          //     password
-          //   }
-          // });
-          // console.log(data)
-          // console.log('delete me')
-          console.log(res.data.status);
 
           if (res.data.status === 'sucess') {
             console.log('scucessfully here');
@@ -12472,20 +12459,20 @@ function () {
             }, 1500);
           }
 
-          _context.next = 14;
+          _context.next = 11;
           break;
 
-        case 10:
-          _context.prev = 10;
+        case 7:
+          _context.prev = 7;
           _context.t0 = _context["catch"](0);
           console.log(_context.t0);
           (0, _alerts.showAlert)('error', _context.t0.response.data.message);
 
-        case 14:
+        case 11:
         case "end":
           return _context.stop();
       }
-    }, _callee, null, [[0, 10]]);
+    }, _callee, null, [[0, 7]]);
   }));
 
   return function login(_x, _x2) {
@@ -12507,14 +12494,11 @@ function () {
         case 0:
           _context2.prev = 0;
           _context2.next = 3;
-          return (0, _axios.default)({
-            method: 'GET',
-            url: 'http://localhost:3000/api/v1/users/logout'
-          });
+          return _axios.default.get('http://localhost:8000/api/v1/users/logout');
 
         case 3:
           res = _context2.sent;
-          if (res.data.status = 'success') location.reload(true);
+          if (res.data.status = 'sucess') location.reload(true);
           _context2.next = 11;
           break;
 
@@ -12971,7 +12955,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "65184" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55067" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
